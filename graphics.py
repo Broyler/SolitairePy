@@ -1,5 +1,6 @@
 import pygame
 from card import *
+from random import shuffle
 
 WINDOW_NAME = "Solitaire"
 WINDOW_SIZE = (1200, 800)
@@ -147,12 +148,28 @@ class GameCard(Card):
         self.draw_cover()
         self.draw_text()
 
-    def mouseUpEvent(self, mousePos) -> None:
-        if (
-            self.x <= mousePos[0] <= self.x + self.width
-            and self.y <= mousePos[1] <= self.y + self.height
-        ):
-            self.is_covered = not self.is_covered
+    def check_hit(self, pos: tuple[int, int]) -> bool:
+        return self.x <= pos[0] <= self.x + int(self.width * self.scale) and self.y <= pos[1] <= self.y + int(self.height * self.scale):
+
+    def mouse_down_event(self, mouse_pos: tuple[int, int]) -> None:
+        if self.is_covered:
+            return
+
+
+class GameDeck(Deck):
+    def __init__(self, surface: pygame.Surface, cards: list[GameCard] = None):
+        self.surface = surface
+        if cards:
+            self._deck = cards
+            return
+        self._deck = []
+        self.fill()
+
+    def fill(self):
+        for suit in range(SUITS):
+            for values in range(VALUES):
+                self._deck.append(GameCard(suit, values, self.surface))
+        shuffle(self._deck)
 
 
 def start() -> (pygame.Surface, pygame.Surface):
@@ -167,32 +184,29 @@ def start() -> (pygame.Surface, pygame.Surface):
 is_running = True
 surface, background = start()
 
-deck = Deck()
-five_slice = Deck(deck.deck[0:7])
-nd = []
+deck = GameDeck(surface)
+stacks = get_stacks(deck)
 
-for index, i in enumerate(five_slice.deck):
-    a = GameCard(i._suit, i._value, surface)
-    a.moveTo(50 + 120 * index, 100)
-    nd.append(a)
-
-nd.append(GameCard(Suit.CLUB, Value.KING, surface))
-nd[-1].moveTo(50, 140)
-nd[-1].is_covered = True
-
+for stack_index, stack in enumerate(stacks):
+    for card_index, card in enumerate(stack):
+        card.moveTo(stack_index * 150 + 50, card_index * 40 + 50)
+        if not card_index == len(stack) - 1:
+            card.is_covered = True
 
 while is_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             is_running = False
 
-        if event.type == pygame.MOUSEBUTTONUP:
-            for i in nd:
-                i.mouseUpEvent(pygame.mouse.get_pos())
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for stack in stacks:
+                for card in stack:
+                    card.mouse_down_event(pygame.mouse.get_pos())
 
     surface.blit(background, (0, 0))
 
-    for i in nd:
-        i.render()
+    for stack in stacks:
+        for card in stack:
+            card.render()
 
     pygame.display.update()
