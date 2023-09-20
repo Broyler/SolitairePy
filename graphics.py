@@ -8,7 +8,12 @@ BACKGROUND_COLOR = "#037d02"
 
 
 class GameCard(Card):
-    def __init__(self, suit: Suit, value: Value, surface: pygame.Surface):
+    def __init__(
+        self,
+        suit: Suit,
+        value: Value,
+        surface: pygame.Surface,
+    ):
         super().__init__(suit, value)
         self.x = 0
         self.y = 0
@@ -17,7 +22,12 @@ class GameCard(Card):
         self.factor = 1.0
         self.surface = surface
         self.cache = {}
+        self.stack = None
         self.is_covered = False
+        self.dragged = False
+        self.drag_start = (0, 0)
+        self.drag_lead = False
+        self.last_drag_pos = (0, 0)
 
     def moveTo(self, x: float, y: float) -> None:
         self.x = x
@@ -145,15 +155,65 @@ class GameCard(Card):
         if self.is_covered:
             self.draw_covered()
             return
+
         self.draw_cover()
         self.draw_text()
 
+    @staticmethod
+    def check_basic_hit(pos: tuple[int, int], card):
+        return card.x <= pos[0] <= card.x + int(
+            card.width * card.factor
+        ) and card.y <= pos[1] <= card.y + int(card.height * card.factor)
+
     def check_hit(self, pos: tuple[int, int]) -> bool:
-        return self.x <= pos[0] <= self.x + int(self.width * self.scale) and self.y <= pos[1] <= self.y + int(self.height * self.scale):
+        if not self.check_basic_hit(pos, self):
+            return False
+
+        for i in reversed(self.stack):
+            if self.check_basic_hit(pos, i):
+                return i is self
 
     def mouse_down_event(self, mouse_pos: tuple[int, int]) -> None:
         if self.is_covered:
             return
+
+        if not self.check_hit(mouse_pos):
+            return
+
+        self.drag_start = (self.x, self.y)
+        self.dragged = True
+        self.drag_lead = True
+        self.last_drag_pos = mouse_pos
+        found_self = False
+
+        for i in self.stack:
+            if found_self:
+                i.drag_start = (i.x, i.y)
+                i.dragged = True
+                i.last_drag_pos = mouse_pos
+
+            if i is self:
+                found_self = True
+
+    def mouse_up_event(self, mouse_pos: tuple[int, int]) -> None:
+        if self.dragged:
+            self.x, self.y = self.drag_start
+            self.drag_lead = False
+            self.dragged = False
+
+    def apply_movement(self, mouse_pos: tuple[int, int] = (0, 0)) -> None:
+        if self.dragged:
+            self.x += mouse_pos[0] - self.last_drag_pos[0]
+            self.y += mouse_pos[1] - self.last_drag_pos[1]
+            self.last_drag_pos = mouse_pos
+
+        if self.drag_lead:
+            center_x = self.x + int(self.width * self.factor / 2)
+            center_y = self.y + int(self.height * self.factor / 2)
+
+    def mainloop(self, mouse_pos: tuple[int, int] = (0, 0)) -> None:
+        self.apply_movement(mouse_pos)
+        self.render()
 
 
 class GameDeck(Deck):
@@ -185,7 +245,7 @@ is_running = True
 surface, background = start()
 
 deck = GameDeck(surface)
-stacks = get_stacks(deck)
+stacks = get_stacks(deck, True)
 
 for stack_index, stack in enumerate(stacks):
     for card_index, card in enumerate(stack):
@@ -203,10 +263,22 @@ while is_running:
                 for card in stack:
                     card.mouse_down_event(pygame.mouse.get_pos())
 
+        if event.type == pygame.MOUSEBUTTONUP:
+            for stack in stacks:
+                for card in stack:
+                    card.mouse_up_event(pygame.mouse.get_pos())
+
     surface.blit(background, (0, 0))
+    late_render = []
 
     for stack in stacks:
         for card in stack:
-            card.render()
+            if card.dragged:
+                late_render.append(card)
+                continue
+            card.mainloop(mouse_pos=pygame.mouse.get_pos())
+
+    for card in late_render:
+        card.mainloop(mouse_pos=pygame.mouse.get_pos())
 
     pygame.display.update()

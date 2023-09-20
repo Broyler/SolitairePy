@@ -3,8 +3,8 @@ from random import shuffle
 
 
 class Suit(Enum):
-    CLUB = 0
-    DIAMOND = 1
+    DIAMOND = 0
+    CLUB = 1
     HEART = 2
     SPADE = 3
 
@@ -71,12 +71,17 @@ class Deck:
         shuffle(self._deck)
 
 
-def get_stacks(deck: Deck) -> list[Deck]:
+def get_stacks(deck: Deck, append_stack: bool = False) -> list[Deck]:
     total = 0
     stacks = []
     for i in range(STACKS):
         stacks.append(deck.deck[total : total + i + 1])
         total += i + 1
+
+    if append_stack:
+        for stack in stacks:
+            for card in stack:
+                card.stack = stack
     return stacks
 
 
