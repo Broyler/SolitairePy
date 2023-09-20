@@ -13,8 +13,10 @@ class GameCard(Card):
         self.y = 0
         self.width = 110
         self.height = 160
+        self.factor = 1.0
         self.surface = surface
         self.cache = {}
+        self.is_covered = False
 
     def moveTo(self, x: float, y: float) -> None:
         self.x = x
@@ -26,7 +28,7 @@ class GameCard(Card):
 
     def draw_cover(self) -> None:
         color = (252, 255, 252)
-        border_size = 2
+        border_size = 2 * self.factor
         border_color = (0, 0, 0)
 
         pygame.draw.rect(
@@ -35,21 +37,23 @@ class GameCard(Card):
             pygame.Rect(
                 self.x - border_size,
                 self.y - border_size,
-                self.width + 2 * border_size,
-                self.height + 2 * border_size,
+                (self.width + 2 * border_size) * self.factor,
+                (self.height + 2 * border_size) * self.factor,
             ),
         )
         pygame.draw.rect(
-            surface,
+            self.surface,
             color,
-            pygame.Rect(self.x, self.y, self.width, self.height),
+            pygame.Rect(
+                self.x, self.y, self.width * self.factor, self.height * self.factor
+            ),
         )
 
     def draw_text(self) -> None:
-        font_size = 28
-        suit_font_size = 54
-        x_padding = 2
-        y_padding = 5
+        font_size = int(28 * self.factor)
+        suit_font_size = int(54 * self.factor)
+        x_padding = 2 * self.factor
+        y_padding = 5 * self.factor
 
         img = self.cache.get("value_img")
         flipped_img = self.cache.get("flipped_value_img")
@@ -86,9 +90,69 @@ class GameCard(Card):
             ),
         )
 
+    def draw_covered(self) -> None:
+        color = (63, 134, 155)
+        border_size = int(2 * self.factor)
+        border_color = (0, 0, 0)
+        cover_color = (42, 106, 128)
+        block_size = 5
+        row_skip = 25
+        initial_margin = 14
+
+        pygame.draw.rect(
+            self.surface,
+            border_color,
+            pygame.Rect(
+                self.x - border_size,
+                self.y - border_size,
+                (self.width + 2 * border_size) * self.factor,
+                (self.height + 2 * border_size) * self.factor,
+            ),
+        )
+        pygame.draw.rect(
+            self.surface,
+            color,
+            pygame.Rect(
+                self.x, self.y, self.width * self.factor, self.height * self.factor
+            ),
+        )
+
+        for y_row in range(
+            self.y + initial_margin,
+            int(self.height * self.factor) + self.y - border_size,
+            row_skip,
+        ):
+            for i, x_col in enumerate(
+                range(
+                    self.x,
+                    int(self.width * self.factor) + self.x - border_size,
+                    block_size,
+                )
+            ):
+                pygame.draw.rect(
+                    self.surface,
+                    cover_color,
+                    pygame.Rect(
+                        x_col,
+                        y_row + (block_size if i % 2 == 0 else 0),
+                        block_size,
+                        block_size,
+                    ),
+                )
+
     def render(self) -> None:
+        if self.is_covered:
+            self.draw_covered()
+            return
         self.draw_cover()
         self.draw_text()
+
+    def mouseUpEvent(self, mousePos) -> None:
+        if (
+            self.x <= mousePos[0] <= self.x + self.width
+            and self.y <= mousePos[1] <= self.y + self.height
+        ):
+            self.is_covered = not self.is_covered
 
 
 def start() -> (pygame.Surface, pygame.Surface):
@@ -114,12 +178,17 @@ for index, i in enumerate(five_slice.deck):
 
 nd.append(GameCard(Suit.CLUB, Value.KING, surface))
 nd[-1].moveTo(50, 140)
+nd[-1].is_covered = True
 
 
 while is_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             is_running = False
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            for i in nd:
+                i.mouseUpEvent(pygame.mouse.get_pos())
 
     surface.blit(background, (0, 0))
 
