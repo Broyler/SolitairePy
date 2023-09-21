@@ -1,6 +1,7 @@
 import pygame
 from card import *
 from random import shuffle
+from math import ceil
 
 WINDOW_NAME = "Solitaire"
 WINDOW_SIZE = (1200, 800)
@@ -17,12 +18,15 @@ class GameCard(Card):
         super().__init__(suit, value)
         self.x = 0
         self.y = 0
-        self.width = 110
-        self.height = 160
-        self.factor = 1.0
+        self.factor = 0.8
+        self.width = round(110 * self.factor)
+        self.height = round(160 * self.factor)
+        self.horizontal_spacing = round(self.width * 1.2)
+        self.vertical_spacing = round(self.height * 0.25)
         self.surface = surface
         self.cache = {}
-        self.stack = None
+        self.stack = []
+        self.all_stacks = []
         self.is_covered = False
         self.dragged = False
         self.drag_start = (0, 0)
@@ -39,30 +43,29 @@ class GameCard(Card):
 
     def draw_cover(self) -> None:
         color = (252, 255, 252)
-        border_size = 2 * self.factor
+        border_size = ceil(2 * self.factor)
         border_color = (0, 0, 0)
 
+        pygame.draw.rect(
+            self.surface,
+            color,
+            pygame.Rect(self.x, self.y, self.width, self.height),
+        )
         pygame.draw.rect(
             self.surface,
             border_color,
             pygame.Rect(
                 self.x - border_size,
                 self.y - border_size,
-                (self.width + 2 * border_size) * self.factor,
-                (self.height + 2 * border_size) * self.factor,
+                round(self.width + 2 * border_size),
+                round(self.height + 2 * border_size),
             ),
-        )
-        pygame.draw.rect(
-            self.surface,
-            color,
-            pygame.Rect(
-                self.x, self.y, self.width * self.factor, self.height * self.factor
-            ),
+            border_size,
         )
 
     def draw_text(self) -> None:
-        font_size = int(28 * self.factor)
-        suit_font_size = int(54 * self.factor)
+        font_size = round(28 * self.factor)
+        suit_font_size = round(54 * self.factor)
         x_padding = 2 * self.factor
         y_padding = 5 * self.factor
 
@@ -103,40 +106,28 @@ class GameCard(Card):
 
     def draw_covered(self) -> None:
         color = (63, 134, 155)
-        border_size = int(2 * self.factor)
+        border_size = ceil(2 * self.factor)
         border_color = (0, 0, 0)
         cover_color = (42, 106, 128)
-        block_size = 5
-        row_skip = 25
-        initial_margin = 14
+        block_size = ceil(5 * self.factor)
+        row_skip = round(25 * self.factor)
+        initial_margin = round(14 * self.factor)
 
         pygame.draw.rect(
             self.surface,
-            border_color,
-            pygame.Rect(
-                self.x - border_size,
-                self.y - border_size,
-                (self.width + 2 * border_size) * self.factor,
-                (self.height + 2 * border_size) * self.factor,
-            ),
-        )
-        pygame.draw.rect(
-            self.surface,
             color,
-            pygame.Rect(
-                self.x, self.y, self.width * self.factor, self.height * self.factor
-            ),
+            pygame.Rect(self.x, self.y, self.width, self.height),
         )
 
         for y_row in range(
             self.y + initial_margin,
-            int(self.height * self.factor) + self.y - border_size,
+            self.y + self.height - border_size,
             row_skip,
         ):
             for i, x_col in enumerate(
                 range(
                     self.x,
-                    int(self.width * self.factor) + self.x - border_size,
+                    self.width + self.x - border_size,
                     block_size,
                 )
             ):
@@ -151,6 +142,18 @@ class GameCard(Card):
                     ),
                 )
 
+        pygame.draw.rect(
+            self.surface,
+            border_color,
+            pygame.Rect(
+                self.x - border_size,
+                self.y - border_size,
+                round(self.width + 2 * border_size),
+                round(self.height + 2 * border_size),
+            ),
+            border_size,
+        )
+
     def render(self) -> None:
         if self.is_covered:
             self.draw_covered()
@@ -161,9 +164,10 @@ class GameCard(Card):
 
     @staticmethod
     def check_basic_hit(pos: tuple[int, int], card):
-        return card.x <= pos[0] <= card.x + int(
-            card.width * card.factor
-        ) and card.y <= pos[1] <= card.y + int(card.height * card.factor)
+        return (
+            card.x <= pos[0] <= card.x + card.width
+            and card.y <= pos[1] <= card.y + card.height
+        )
 
     def check_hit(self, pos: tuple[int, int]) -> bool:
         if not self.check_basic_hit(pos, self):
@@ -178,6 +182,9 @@ class GameCard(Card):
             return
 
         if not self.check_hit(mouse_pos):
+            return
+
+        if self.dragged:
             return
 
         self.drag_start = (self.x, self.y)
@@ -197,19 +204,71 @@ class GameCard(Card):
 
     def mouse_up_event(self, mouse_pos: tuple[int, int]) -> None:
         if self.dragged:
+            if self.drag_lead:
+                center_x = self.x + round(self.width / 2)
+                center_y = self.y + round(self.height / 2)
+                closest_stack_index = round(
+                    (center_x - round(50 * self.factor) - self.width / 2)
+                    / self.horizontal_spacing
+                )
+
+                if closest_stack_index + 1 > STACKS:
+                    closest_stack_index = STACKS - 1
+
+                if closest_stack_index < 0:
+                    closest_stack_index = 0
+
+                if len(self.all_stacks[closest_stack_index]) == 0:
+                    self.x, self.y = self.drag_start
+                    self.drag_lead = False
+                    self.dragged = False
+                    return
+
+                if (
+                    closest_stack_index < 0
+                    or closest_stack_index > len(self.all_stacks) - 1
+                ):
+                    return
+
+                closest_card = self.all_stacks[closest_stack_index][-1]
+                closest_card_y_center = closest_card.y + round(closest_card.height / 2)
+                if abs(closest_card_y_center - center_y) - 20 < self.height:
+                    if (
+                        self._value.value + 1 == closest_card._value.value
+                        and self._suit.value % 2 != closest_card._suit.value % 2
+                    ):
+                        try:
+                            self.stack[self.stack.index(self) - 1].is_covered = False
+
+                        except:
+                            pass
+
+                        for index, i in enumerate(self.stack[self.stack.index(self) :]):
+                            i.x = closest_card.x
+                            i.y = closest_card.y + i.vertical_spacing * (index + 1)
+                            i.dragged = False
+                            i.drag_lead = False
+                            closest_card.stack.append(i)
+                            i.stack.remove(i)
+                            i.stack = closest_card.stack
+                        return
+
             self.x, self.y = self.drag_start
             self.drag_lead = False
             self.dragged = False
 
     def apply_movement(self, mouse_pos: tuple[int, int] = (0, 0)) -> None:
         if self.dragged:
+            if not pygame.mouse.get_focused():
+                self.dragged = False
+                self.drag_lead = False
+                self.x, self.y = self.drag_start
+                return
+
             self.x += mouse_pos[0] - self.last_drag_pos[0]
             self.y += mouse_pos[1] - self.last_drag_pos[1]
             self.last_drag_pos = mouse_pos
-
-        if self.drag_lead:
-            center_x = self.x + int(self.width * self.factor / 2)
-            center_y = self.y + int(self.height * self.factor / 2)
+            stack_index * 150 + 50
 
     def mainloop(self, mouse_pos: tuple[int, int] = (0, 0)) -> None:
         self.apply_movement(mouse_pos)
@@ -235,6 +294,8 @@ class GameDeck(Deck):
 def start() -> (pygame.Surface, pygame.Surface):
     pygame.init()
     pygame.display.set_caption(WINDOW_NAME)
+    pygame_icon = pygame.image.load("icon.png")
+    pygame.display.set_icon(pygame_icon)
     surface = pygame.display.set_mode(WINDOW_SIZE)
     background = pygame.Surface(WINDOW_SIZE)
     background.fill(pygame.Color(BACKGROUND_COLOR))
@@ -249,7 +310,10 @@ stacks = get_stacks(deck, True)
 
 for stack_index, stack in enumerate(stacks):
     for card_index, card in enumerate(stack):
-        card.moveTo(stack_index * 150 + 50, card_index * 40 + 50)
+        card.moveTo(
+            stack_index * card.horizontal_spacing + round(50 * card.factor),
+            card_index * card.vertical_spacing + round(50 * card.factor),
+        )
         if not card_index == len(stack) - 1:
             card.is_covered = True
 
@@ -258,12 +322,12 @@ while is_running:
         if event.type == pygame.QUIT:
             is_running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for stack in stacks:
                 for card in stack:
                     card.mouse_down_event(pygame.mouse.get_pos())
 
-        if event.type == pygame.MOUSEBUTTONUP:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             for stack in stacks:
                 for card in stack:
                     card.mouse_up_event(pygame.mouse.get_pos())

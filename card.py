@@ -10,19 +10,19 @@ class Suit(Enum):
 
 
 class Value(Enum):
-    TWO = 0
-    THREE = 1
-    FOUR = 2
-    FIVE = 3
-    SIX = 4
-    SEVEN = 5
-    EIGHT = 6
-    NINE = 7
-    TEN = 8
-    JACK = 9
-    QUEEN = 10
-    KING = 11
-    ACE = 12
+    ACE = 0
+    TWO = 1
+    THREE = 2
+    FOUR = 3
+    FIVE = 4
+    SIX = 5
+    SEVEN = 6
+    EIGHT = 7
+    NINE = 8
+    TEN = 9
+    JACK = 10
+    QUEEN = 11
+    KING = 12
 
 
 SUITS = len(Suit)
@@ -39,8 +39,8 @@ class Card:
         return f"{self._value.name.capitalize()} of {self._suit.name.lower()}s"
 
     def true_value(self) -> str:
-        if self._value.value < Value.JACK.value:
-            return str(self._value.value + 2)
+        if self._value.value < Value.JACK.value and not self._value is Value.ACE:
+            return str(self._value.value + 1)
         return str(self._value.name)[0]
 
     def card_color(self) -> tuple[int, int, int]:
@@ -49,7 +49,7 @@ class Card:
         return (0, 0, 0)
 
     def suit_symbol(self) -> str:
-        return ["♣", "♦", "♥", "♠"][self._suit.value]
+        return ["♦", "♣", "♥", "♠"][self._suit.value]
 
 
 class Deck:
@@ -82,6 +82,7 @@ def get_stacks(deck: Deck, append_stack: bool = False) -> list[Deck]:
         for stack in stacks:
             for card in stack:
                 card.stack = stack
+                card.all_stacks = stacks
     return stacks
 
 
