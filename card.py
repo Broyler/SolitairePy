@@ -83,7 +83,7 @@ def get_stacks(deck: Deck, append_stack: bool = False) -> list[Deck]:
             for card in stack:
                 card.stack = stack
                 card.all_stacks = stacks
-    return stacks
+    return stacks, deck.deck[total:]
 
 
 deck = Deck()
