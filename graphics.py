@@ -262,10 +262,53 @@ class GameCard(Card):
                     closest_stack_index = 0
 
                 if len(self.all_stacks[closest_stack_index]) == 0:
-                    self.x, self.y = self.drag_start
-                    self.drag_lead = False
-                    self.dragged = False
-                    return self.uncovered_draw_stack
+                    if not self._value is Value.KING:
+                        self.x, self.y = self.drag_start
+                        self.drag_lead = False
+                        self.dragged = False
+                        return self.uncovered_draw_stack
+
+                    closest_card_y_center = CORNER_PADDING + round(CARD_HEIGHT / 2)
+                    if abs(closest_card_y_center - center_y) - 20 < CARD_HEIGHT:
+                        try:
+                            self.stack[self.stack.index(self) - 1].is_covered = False
+
+                        except:
+                            pass
+
+                        if self.stack:
+                            for index, i in enumerate(
+                                self.stack[self.stack.index(self) :]
+                            ):
+                                print(self.stack)
+                                print(self.stack[self.stack.index(self) :])
+                                i.x = (
+                                    closest_stack_index * HORIZONTAL_SPACING
+                                    + CORNER_PADDING
+                                )
+                                i.y = CORNER_PADDING + VERTICAL_SPACING * index
+                                i.dragged = False
+                                i.drag_lead = False
+                                # new_stack.append(i)
+                                self.all_stacks[closest_stack_index].append(i)
+                                i.stack.remove(i)
+                                i.stack = self.all_stacks[closest_stack_index]
+                                return
+
+                        self.x = (
+                            closest_stack_index * HORIZONTAL_SPACING + CORNER_PADDING
+                        )
+                        self.y = CORNER_PADDING
+                        print(CORNER_PADDING, self.y)
+                        self.dragged = False
+                        self.drag_lead = False
+                        # new_stack = [
+                        #     self,
+                        # ]
+                        self.all_stacks[closest_stack_index].append(self)
+                        self.stack = self.all_stacks[closest_stack_index]
+                        self.uncovered_draw_stack.pop(-1)
+                        return self.uncovered_draw_stack
 
                 if (
                     closest_stack_index < 0
