@@ -280,8 +280,6 @@ class GameCard(Card):
                             for index, i in enumerate(
                                 self.stack[self.stack.index(self) :]
                             ):
-                                print(self.stack)
-                                print(self.stack[self.stack.index(self) :])
                                 i.x = (
                                     closest_stack_index * HORIZONTAL_SPACING
                                     + CORNER_PADDING
@@ -289,22 +287,17 @@ class GameCard(Card):
                                 i.y = CORNER_PADDING + VERTICAL_SPACING * index
                                 i.dragged = False
                                 i.drag_lead = False
-                                # new_stack.append(i)
-                                self.all_stacks[closest_stack_index].append(i)
+                                i.all_stacks[closest_stack_index].append(i)
                                 i.stack.remove(i)
-                                i.stack = self.all_stacks[closest_stack_index]
-                                return
+                                i.stack = i.all_stacks[closest_stack_index]
+                            return
 
                         self.x = (
                             closest_stack_index * HORIZONTAL_SPACING + CORNER_PADDING
                         )
                         self.y = CORNER_PADDING
-                        print(CORNER_PADDING, self.y)
                         self.dragged = False
                         self.drag_lead = False
-                        # new_stack = [
-                        #     self,
-                        # ]
                         self.all_stacks[closest_stack_index].append(self)
                         self.stack = self.all_stacks[closest_stack_index]
                         self.uncovered_draw_stack.pop(-1)
