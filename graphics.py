@@ -221,13 +221,19 @@ class GameCard(Card):
     def mouse_up_event(self, mouse_pos: tuple[int, int]) -> None:
         if self.is_static:
             if not self.click_start_static:
-                return
+                return self.uncovered_draw_stack, self.total_draw_stack
 
             if self.check_hit(mouse_pos):
+                if len(self.total_draw_stack) == 0:
+                    self.total_draw_stack = self.uncovered_draw_stack
+                    self.uncovered_draw_stack = []
+                    self.click_start_static = False
+                    return self.uncovered_draw_stack, self.total_draw_stack
+
                 self.uncovered_draw_stack.append(self.total_draw_stack[0])
                 self.total_draw_stack.pop(0)
                 self.click_start_static = False
-                return
+            return self.uncovered_draw_stack, self.total_draw_stack
 
         if self.dragged:
             if self.drag_lead:
@@ -345,41 +351,45 @@ draw_card.is_covered = True
 
 
 def draw_empty_stack(surface: pygame.Surface):
-    color = (108, 167, 88)
-    border_size = ceil(2 * RENDER_FACTOR)
-    border_color = (43, 67, 35)
-    radius = round(30 * RENDER_FACTOR)
-    circle_border = round(5 * RENDER_FACTOR)
+    for ix in range(2):
+        color = (108, 167, 88)
+        border_size = ceil(2 * RENDER_FACTOR)
+        border_color = (43, 67, 35)
+        radius = round(30 * RENDER_FACTOR)
+        circle_border = round(5 * RENDER_FACTOR)
 
-    pygame.draw.rect(
-        surface,
-        color,
-        pygame.Rect(
-            draw_x,
-            draw_y,
-            CARD_WIDTH,
-            CARD_HEIGHT,
-        ),
-    )
-    pygame.draw.rect(
-        surface,
-        border_color,
-        pygame.Rect(
-            draw_x - border_size,
-            draw_y - border_size,
-            round(CARD_WIDTH + 2 * border_size),
-            round(CARD_HEIGHT + 2 * border_size),
-        ),
-        border_size,
-    )
+        pygame.draw.rect(
+            surface,
+            color,
+            pygame.Rect(
+                draw_x + ix * (HORIZONTAL_SPACING),
+                draw_y,
+                CARD_WIDTH,
+                CARD_HEIGHT,
+            ),
+        )
+        pygame.draw.rect(
+            surface,
+            border_color,
+            pygame.Rect(
+                draw_x + ix * (HORIZONTAL_SPACING) - border_size,
+                draw_y - border_size,
+                round(CARD_WIDTH + 2 * border_size),
+                round(CARD_HEIGHT + 2 * border_size),
+            ),
+            border_size,
+        )
 
-    pygame.draw.circle(
-        surface,
-        border_color,
-        (draw_x + CARD_WIDTH / 2, draw_y + CARD_HEIGHT / 2),
-        radius,
-        width=circle_border,
-    )
+        pygame.draw.circle(
+            surface,
+            border_color,
+            (
+                draw_x + ix * (HORIZONTAL_SPACING) + CARD_WIDTH / 2,
+                draw_y + CARD_HEIGHT / 2,
+            ),
+            radius,
+            width=circle_border,
+        )
 
 
 for stack_index, stack in enumerate(stacks):
@@ -403,7 +413,9 @@ while is_running:
                     card.mouse_down_event(pygame.mouse.get_pos())
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            draw_card.mouse_up_event(pygame.mouse.get_pos())
+            draw_stack_uncovered, draw_stack_current = draw_card.mouse_up_event(
+                pygame.mouse.get_pos()
+            )
             for stack in stacks:
                 for card in stack:
                     card.mouse_up_event(pygame.mouse.get_pos())
