@@ -226,11 +226,23 @@ class GameCard(Card):
             if self.check_hit(mouse_pos):
                 if len(self.total_draw_stack) == 0:
                     self.total_draw_stack = self.uncovered_draw_stack
+                    for i in self.total_draw_stack:
+                        i.moveTo(
+                            round(STACKS * HORIZONTAL_SPACING + 2 * CORNER_PADDING),
+                            CORNER_PADDING,
+                        )
                     self.uncovered_draw_stack = []
                     self.click_start_static = False
                     return self.uncovered_draw_stack, self.total_draw_stack
 
                 self.uncovered_draw_stack.append(self.total_draw_stack[0])
+                self.uncovered_draw_stack[-1].moveTo(
+                    round(STACKS * HORIZONTAL_SPACING + 2 * CORNER_PADDING),
+                    CORNER_PADDING,
+                )
+                self.uncovered_draw_stack[
+                    -1
+                ].uncovered_draw_stack = self.uncovered_draw_stack
                 self.total_draw_stack.pop(0)
                 self.click_start_static = False
             return self.uncovered_draw_stack, self.total_draw_stack
@@ -253,13 +265,13 @@ class GameCard(Card):
                     self.x, self.y = self.drag_start
                     self.drag_lead = False
                     self.dragged = False
-                    return
+                    return self.uncovered_draw_stack
 
                 if (
                     closest_stack_index < 0
                     or closest_stack_index > len(self.all_stacks) - 1
                 ):
-                    return
+                    return self.uncovered_draw_stack
 
                 closest_card = self.all_stacks[closest_stack_index][-1]
                 closest_card_y_center = closest_card.y + round(CARD_HEIGHT / 2)
@@ -274,19 +286,32 @@ class GameCard(Card):
                         except:
                             pass
 
-                        for index, i in enumerate(self.stack[self.stack.index(self) :]):
-                            i.x = closest_card.x
-                            i.y = closest_card.y + VERTICAL_SPACING * (index + 1)
-                            i.dragged = False
-                            i.drag_lead = False
-                            closest_card.stack.append(i)
-                            i.stack.remove(i)
-                            i.stack = closest_card.stack
-                        return
+                        if self.stack:
+                            for index, i in enumerate(
+                                self.stack[self.stack.index(self) :]
+                            ):
+                                i.x = closest_card.x
+                                i.y = closest_card.y + VERTICAL_SPACING * (index + 1)
+                                i.dragged = False
+                                i.drag_lead = False
+                                closest_card.stack.append(i)
+                                i.stack.remove(i)
+                                i.stack = closest_card.stack
+                            return self.uncovered_draw_stack
+
+                        self.x = closest_card.x
+                        self.y = closest_card.y + VERTICAL_SPACING
+                        self.dragged = False
+                        self.drag_lead = False
+                        closest_card.stack.append(self)
+                        self.stack = closest_card.stack
+                        self.uncovered_draw_stack.pop(-1)
+                        return self.uncovered_draw_stack
 
             self.x, self.y = self.drag_start
             self.drag_lead = False
             self.dragged = False
+            return self.uncovered_draw_stack
 
     def apply_movement(self, mouse_pos: tuple[int, int] = (0, 0)) -> None:
         if self.dragged:
@@ -401,6 +426,9 @@ for stack_index, stack in enumerate(stacks):
         if not card_index == len(stack) - 1:
             card.is_covered = True
 
+for i in draw_stack_current:
+    i.all_stacks = stacks
+
 while is_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -408,6 +436,10 @@ while is_running:
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             draw_card.mouse_down_event(pygame.mouse.get_pos())
+            if len(draw_stack_uncovered) > 0:
+                # draw_stack_uncovered[-1].uncovered_draw_stack = draw_stack_uncovered
+                draw_stack_uncovered[-1].mouse_down_event(pygame.mouse.get_pos())
+
             for stack in stacks:
                 for card in stack:
                     card.mouse_down_event(pygame.mouse.get_pos())
@@ -416,6 +448,11 @@ while is_running:
             draw_stack_uncovered, draw_stack_current = draw_card.mouse_up_event(
                 pygame.mouse.get_pos()
             )
+
+            if len(draw_stack_uncovered) > 0:
+                # draw_stack_uncovered[-1].uncovered_draw_stack = draw_stack_uncovered
+                draw_stack_uncovered[-1].mouse_up_event(pygame.mouse.get_pos())
+
             for stack in stacks:
                 for card in stack:
                     card.mouse_up_event(pygame.mouse.get_pos())
@@ -426,8 +463,7 @@ while is_running:
     if len(draw_stack_current) > 0:
         draw_card.render()
 
-    for i in draw_stack_uncovered:
-        i.moveTo(draw_x, draw_y)
+    for i in draw_stack_uncovered[:-1]:
         i.render()
 
     for stack in stacks:
@@ -436,6 +472,9 @@ while is_running:
                 late_render.append(card)
                 continue
             card.mainloop(mouse_pos=pygame.mouse.get_pos())
+
+    if len(draw_stack_uncovered) > 0:
+        draw_stack_uncovered[-1].mainloop(pygame.mouse.get_pos())
 
     for card in late_render:
         card.mainloop(mouse_pos=pygame.mouse.get_pos())
