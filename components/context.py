@@ -39,7 +39,7 @@ class Context:
 
     def run(self):
         is_running = True
-        self.add_object(card.Card())
+        self.add_object(card.Card(0, 0))
 
         while is_running:
             for event in pygame.event.get():

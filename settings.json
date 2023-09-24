@@ -6,12 +6,8 @@
     "background_color": "#037d02",
     "icon_path": "assets/icon.png",
     "scale": {
-      "factor": 1.0,
-      "modes": [
-        "override",
-        "multiply"
-      ],
-      "default_mode": "override"
+      "default_mode": 1,
+      "factor": 1
     },
     "padding": {
       "top": 50.0,
@@ -20,13 +16,14 @@
   },
   "card": {
     "scale": {
-      "factor": 1.0,
-      "mode": "override"
+      "mode": 1,
+      "factor": 1
     },
     "width": 110.0,
     "height": 160.0,
+    "background_color": "#fcfffc",
     "border": {
-      "width": 2.0,
+      "width": 3.0,
       "color": "#000000"
     }
   }
