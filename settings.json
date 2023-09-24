@@ -1,0 +1,33 @@
+{
+  "window": {
+    "width": 800,
+    "height": 600,
+    "caption": "Solitaire Py",
+    "background_color": "#037d02",
+    "icon_path": "assets/icon.png",
+    "scale": {
+      "factor": 1.0,
+      "modes": [
+        "override",
+        "multiply"
+      ],
+      "default_mode": "override"
+    },
+    "padding": {
+      "top": 50.0,
+      "left": 50.0
+    }
+  },
+  "card": {
+    "scale": {
+      "factor": 1.0,
+      "mode": "override"
+    },
+    "width": 110.0,
+    "height": 160.0,
+    "border": {
+      "width": 2.0,
+      "color": "#000000"
+    }
+  }
+}
