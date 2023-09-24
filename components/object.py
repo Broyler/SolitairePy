@@ -27,5 +27,8 @@ class Object:
     def rect(self):
         return *self.position, *self.dimensions
 
+    def is_inside(self, x, y):
+        return self.x <= x <= self.x + self.width and self.y <= y <= self.height
+
     def draw(self):
         pygame.draw.rect(self.surface, self.color, self.rect)

@@ -6,6 +6,8 @@ settings = fs.load("settings.json")["window"]
 
 class Context:
     surface = None
+    bg = None
+    objects = []
 
     def __init__(self):
         self.set_up_window()
@@ -19,18 +21,26 @@ class Context:
             settings["width"],
             settings["height"]
         ))
-        bg = pygame.Surface((
+        self.bg = pygame.Surface((
             settings["width"],
             settings["height"]
         ))
-        bg.fill(pygame.Color(settings["background_color"]))
-        self.surface.blit(bg, (0, 0))
+        self.bg.fill(pygame.Color(settings["background_color"]))
+
+    def render_objects(self):
+        self.surface.blit(self.bg, (0, 0))
+        for i in self.objects:
+            self.surface.blit(i.surface, i.position)
+        pygame.display.update()
+
+    def add_object(self, obj):
+        self.objects.append(obj)
+        self.render_objects()
 
     def run(self):
         is_running = True
-        test_blob = card.Card()
-        self.surface.blit(test_blob.surface, (0, 0))
-        pygame.display.update()
+        self.add_object(card.Card())
+
         while is_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
