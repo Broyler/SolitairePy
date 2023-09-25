@@ -40,8 +40,11 @@ class Context:
     def run(self):
         is_running = True
         self.add_object(card.Card(0, 0))
+        self.objects[0].translate(200, 200)
 
         while is_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     is_running = False
+
+            self.render_objects()

@@ -2,6 +2,7 @@
   "window": {
     "width": 800,
     "height": 600,
+    "translation_time": 0.3,
     "caption": "Solitaire Py",
     "background_color": "#037d02",
     "icon_path": "assets/icon.png",
