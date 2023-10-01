@@ -8,6 +8,7 @@ class Context:
     surface = None
     bg = None
     objects = []
+    stacks = []
 
     def __init__(self):
         self.set_up_window()
@@ -26,6 +27,9 @@ class Context:
             settings["height"]
         ))
         self.bg.fill(pygame.Color(settings["background_color"]))
+
+    def generate_deck(self):
+        pass
 
     def render_objects(self):
         self.surface.blit(self.bg, (0, 0))
